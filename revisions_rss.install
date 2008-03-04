@@ -1,0 +1,25 @@
+<?php
+// $Id: revisions_rss.install,v 1.1 2008/03/04 23:54:46 alexj Exp $
+
+/**
+ * @file
+ * Provides install and uninstall functions for revisions_rss.
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+function revisions_rss_install() {
+  variable_set('revision_rss_nodetypes', array('page'));
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function revisions_rss_uninstall() {
+  // Delete all the revision_rss variables and then clear the variable cache.
+  db_query("DELETE FROM {variable} WHERE name LIKE 'revision_rss_%'");
+  db_query("DELETE FROM {menu} WHERE path = 'admin/content/revisions-rss'");
+  cache_clear_all('variables', 'cache');
+}
+
