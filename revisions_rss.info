@@ -1,6 +1,3 @@
-; $Id: revisions_rss.info,v 1.1 2008/03/04 23:54:46 alexj Exp $
-name = Revisions RSS
-description = Makes node revisions viewable as an RSS feed
-
-version = "5.x-1.0"
-project = "revisions_rss"
+; $Id: revisions_rss.info,v 1.2 2008/03/05 00:59:40 alexj Exp $
+name = "Revisions RSS"
+description = "Makes node revisions viewable as an RSS feed"
