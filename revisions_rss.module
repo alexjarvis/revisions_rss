@@ -1,5 +1,5 @@
 <?php
-// $Id: revisions_rss.module,v 1.1 2008/03/04 23:54:46 alexj Exp $
+// $Id: revisions_rss.module,v 1.2 2008/09/30 19:11:57 alexj Exp $
 
 /**
  * @file
@@ -133,13 +133,14 @@ function revisions_rss_get_revisions($nid) {
   $items = '';
   
   $sql = "SELECT nr.nid
-                 , n.title
-                 , nr.uid
-                 , nr.vid
-                 , nr.timestamp
+               , n.title
+               , nr.uid
+               , nr.vid
+               , nr.log
+               , nr.timestamp
           FROM {node_revisions} nr
           INNER JOIN {node} n
-          ON nr.nid = n.nid
+             ON nr.nid = n.nid
           WHERE nr.nid = '$nid'
           ORDER BY nr.timestamp DESC";
   
@@ -148,7 +149,12 @@ function revisions_rss_get_revisions($nid) {
   while ($node = db_fetch_object($nodes)) {
     $user = user_load(array('uid' => $node->uid));
     $node->name = $user->name;
-    $node->description = 'Updated by: '. $user->name;
+    
+    if(!empty($node->log)) {
+        $node->description = "Log: {$node->log}\n\n"; 
+    }
+    
+    $node->description .= "Updated by: {$user->name}";
     
     $extra = array(
       array(
