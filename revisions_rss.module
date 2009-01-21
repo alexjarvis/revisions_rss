@@ -1,5 +1,5 @@
 <?php
-// $Id: revisions_rss.module,v 1.2 2008/09/30 19:11:57 alexj Exp $
+// $Id: revisions_rss.module,v 1.3 2009/01/21 02:49:43 alexj Exp $
 
 /**
  * @file
@@ -42,7 +42,7 @@ function revisions_rss_menu($may_cache) {
       $node = node_load(arg(1));
       
       if (revision_rss_check_type($node) && user_access(REV_RSS_PERM)) {
-        drupal_add_feed(url('revisionrss/node/'. $node->nid), t('Updates for @title', array('@title' => $node->title)));
+        drupal_add_feed(url('revisionrss/node/'. $node->nid), t('Updates to @title', array('@title' => $node->title)));
       }
     }
   }
@@ -83,8 +83,10 @@ function revisions_rss_handler() {
 function revisions_rss_node_feed() {
   global $base_url;
   
-  if (is_numeric(arg(2))) {
-    $node = node_load(arg(2));
+  $nid = check_plain(arg(2));
+  
+  if (is_numeric($nid)) {
+    $node = node_load($nid);
     
     if (revision_rss_check_type($node)) {
       $items = revisions_rss_get_revisions($node->nid);
@@ -93,8 +95,8 @@ function revisions_rss_node_feed() {
       
       $channel = array(
         'title' => t('@site - Updates for "@title"', array(
-          '@site' => check_plain(variable_get('site_name', 'Drupal')),
-          '@title' => check_plain($node->title))),
+          '@site' => variable_get('site_name', 'Drupal'),
+          '@title' => $node->title)),
         'description' => t('Updates for "@title"', array('@title' => $node->title)),
         'link' => url('node/'. $node->nid, NULL, NULL, TRUE));
       
@@ -136,6 +138,7 @@ function revisions_rss_get_revisions($nid) {
                , n.title
                , nr.uid
                , nr.vid
+               , n.vid AS latest
                , nr.log
                , nr.timestamp
           FROM {node_revisions} nr
@@ -154,7 +157,7 @@ function revisions_rss_get_revisions($nid) {
         $node->description = "Log: {$node->log}\n\n"; 
     }
     
-    $node->description .= "Updated by: {$user->name}";
+    $node->description .= "Updated by: {$user->name}\n\n";
     
     $extra = array(
       array(
@@ -165,9 +168,18 @@ function revisions_rss_get_revisions($nid) {
         'value' => $node->name),
       array(
         'key' => 'guid',
-        'value' => 'Update '. $node->vid .' at '. $base_url .'/node/'. $node->nid,
-        'attributes' => array('isPermaLink' => 'false')));
+        'value' => t("Update !vid at !base/node/!nid", array('!vid' => $node->vid, 
+                                                             '!base' => $base_url, 
+                                                             '!nid' => $node->nid)),
+        'attributes' => array('isPermaLink' => 'false'))
+    );
+    
+    if(module_exists('diff') && $node->vid != $node->latest) {
+      $node->description .= l("Diff vs Newest", "node/{$node->nid}/revisions/view/{$node->vid}/{$node->latest}");
+    } 
+
     $link = url("node/{$node->nid}", NULL, NULL, TRUE);
+
     $items .= format_rss_item($node->title, $link, check_markup($node->description, $node->format, FALSE), $extra);
   }
   
@@ -186,7 +198,7 @@ function revisions_rss_format_feed($items, $channel = array(), $namespaces = arr
   
   $channel_defaults = array(
     'version' => '2.0',
-    'title' => check_plain(variable_get('site_name', 'Drupal')) .' - '. t('Updates'),
+    'title' => t('@site_name - Updates', array('@site_name' => variable_get('site_name', 'Drupal'))),
     'link' => $base_url,
     'description' => t('Updates'),
     'language' => $locale);
