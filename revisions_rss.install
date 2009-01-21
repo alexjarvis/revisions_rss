@@ -1,5 +1,5 @@
 <?php
-// $Id: revisions_rss.install,v 1.1 2008/03/04 23:54:46 alexj Exp $
+// $Id: revisions_rss.install,v 1.2 2009/01/21 21:29:18 alexj Exp $
 
 /**
  * @file
@@ -7,19 +7,9 @@
  */
 
 /**
- * Implementation of hook_install().
- */
-function revisions_rss_install() {
-  variable_set('revision_rss_nodetypes', array('page'));
-}
-
-/**
  * Implementation of hook_uninstall().
  */
 function revisions_rss_uninstall() {
-  // Delete all the revision_rss variables and then clear the variable cache.
-  db_query("DELETE FROM {variable} WHERE name LIKE 'revision_rss_%'");
-  db_query("DELETE FROM {menu} WHERE path = 'admin/content/revisions-rss'");
-  cache_clear_all('variables', 'cache');
+  // Delete all the revision_rss variable.
+  variable_del('revision_rss_nodetypes');
 }
-

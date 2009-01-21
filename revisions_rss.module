@@ -1,5 +1,5 @@
 <?php
-// $Id: revisions_rss.module,v 1.3 2009/01/21 02:49:43 alexj Exp $
+// $Id: revisions_rss.module,v 1.4 2009/01/21 21:29:18 alexj Exp $
 
 /**
  * @file
@@ -18,98 +18,48 @@ function revisions_rss_perm() {
 /**
  * Implementation of hook_menu().
  */
-function revisions_rss_menu($may_cache) {
+function revisions_rss_menu() {
   $items = array();
-  
-  if ($may_cache) {
-    $items[] = array(
-      'path' => 'admin/content/revision-rss',
-      'title' => t('Revision RSS publishing'),
-      'description' => t('Configure RSS feeds for revisions.'),
-      'callback' => 'drupal_get_form',
-      'callback arguments' => 'revision_rss_admin_settings',
-      'access' => user_access('administer site configuration'),
-      'type' => MENU_NORMAL_ITEM);
-    $items[] = array(
-      'path' => 'revisionrss',
-      'title' => '',
-      'callback' => 'revisions_rss_handler',
-      'access' => user_access(REV_RSS_PERM),
-      'type' => MENU_CALLBACK);
-  }
-  else {
-    if (arg(0) == 'node' && is_numeric(arg(1))) {
-      $node = node_load(arg(1));
-      
-      if (revision_rss_check_type($node) && user_access(REV_RSS_PERM)) {
-        drupal_add_feed(url('revisionrss/node/'. $node->nid), t('Updates to @title', array('@title' => $node->title)));
-      }
-    }
-  }
-  
+
+  $items['admin/content/rss-publishing/default'] = array(
+    'title' => 'General settings',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+  $items['admin/content/rss-publishing/revision-rss'] = array(
+    'title' => 'Revision RSS publishing',
+    'description' => 'Configure RSS feeds for revisions.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('revision_rss_admin_settings'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 10,
+    'file' => 'revisions_rss.admin.inc',
+  );
+  $items['node/%node/revisions/rss'] = array(
+    'title' => '',
+    'page callback' => 'revisions_rss_handler',
+    'page arguments' => array(1),
+    'access arguments' => array(REV_RSS_PERM),
+    'type' => MENU_CALLBACK,
+    'file' => 'revisions_rss.pages.inc',
+  );
+
   return $items;
 }
 
 /**
- * Define the settings form.
+ * Implementation of hook_init().
  */
-function revision_rss_admin_settings() {
-  $form['revision_rss_nodetypes'] = array(
-    '#type' => 'checkboxes',
-    '#title' => t('Generate RSS for these node types'),
-    '#options' => node_get_types('names'),
-    '#default_value' => variable_get('revision_rss_nodetypes', array('page')));
-  $form['array_filter'] = array('#type' => 'hidden');
-  
-  return system_settings_form($form);
-}
+function revisions_rss_init() {
+  // Expose node feed on node view page.
+  if ((arg(0) == 'node') && is_numeric($nid = arg(1)) && is_null(arg(2)) &&
+      ($node = node_load($nid)) && revision_rss_check_type($node) &&
+      user_access(REV_RSS_PERM)) {
 
-/**
- * Menu callback; publish an RSS feed
- */
-function revisions_rss_handler() {
-  if (call_user_func('revisions_rss_node_feed')) {
-    return;
+    drupal_add_feed(url("node/{$node->nid}/revisions/rss"),
+                    t('Updates to "@title"', array('@title' => $node->title))
+    );
   }
-  
-  drupal_not_found();
-}
-
-/**
- * Publish a feed for all revisions of a specific node
- *
- * @return bool True if successful in generating a feed, false otherwise.
- */
-function revisions_rss_node_feed() {
-  global $base_url;
-  
-  $nid = check_plain(arg(2));
-  
-  if (is_numeric($nid)) {
-    $node = node_load($nid);
-    
-    if (revision_rss_check_type($node)) {
-      $items = revisions_rss_get_revisions($node->nid);
-      
-      $namespaces = array();
-      
-      $channel = array(
-        'title' => t('@site - Updates for "@title"', array(
-          '@site' => variable_get('site_name', 'Drupal'),
-          '@title' => $node->title)),
-        'description' => t('Updates for "@title"', array('@title' => $node->title)),
-        'link' => url('node/'. $node->nid, NULL, NULL, TRUE));
-      
-      revisions_rss_format_feed($items, $channel, $namespaces);
-      
-      return TRUE;
-    }
-    else {
-      return FALSE;
-    }
-  }
-  
-  return FALSE;
 }
 
 /**
@@ -121,96 +71,4 @@ function revisions_rss_node_feed() {
  */
 function revision_rss_check_type($node) {
   return $node->nid && in_array($node->type, variable_get('revision_rss_nodetypes', array('page')));
-}
-
-/**
- *  Takes a node ID and generates the rss for that nodes revisions.
- *
- * @param $nid int The node ID of the note to generate RSS for.
- * @return The generated RSS.
- */
-function revisions_rss_get_revisions($nid) {
-  global $base_url;
-  
-  $items = '';
-  
-  $sql = "SELECT nr.nid
-               , n.title
-               , nr.uid
-               , nr.vid
-               , n.vid AS latest
-               , nr.log
-               , nr.timestamp
-          FROM {node_revisions} nr
-          INNER JOIN {node} n
-             ON nr.nid = n.nid
-          WHERE nr.nid = '$nid'
-          ORDER BY nr.timestamp DESC";
-  
-  $nodes = db_query_range(db_rewrite_sql($sql), 0, variable_get('feed_default_items', 10));
-  
-  while ($node = db_fetch_object($nodes)) {
-    $user = user_load(array('uid' => $node->uid));
-    $node->name = $user->name;
-    
-    if(!empty($node->log)) {
-        $node->description = "Log: {$node->log}\n\n"; 
-    }
-    
-    $node->description .= "Updated by: {$user->name}\n\n";
-    
-    $extra = array(
-      array(
-        'key' => 'pubDate',
-        'value' => date('r', $node->timestamp)),
-      array(
-        'key' => 'dc:creator',
-        'value' => $node->name),
-      array(
-        'key' => 'guid',
-        'value' => t("Update !vid at !base/node/!nid", array('!vid' => $node->vid, 
-                                                             '!base' => $base_url, 
-                                                             '!nid' => $node->nid)),
-        'attributes' => array('isPermaLink' => 'false'))
-    );
-    
-    if(module_exists('diff') && $node->vid != $node->latest) {
-      $node->description .= l("Diff vs Newest", "node/{$node->nid}/revisions/view/{$node->vid}/{$node->latest}");
-    } 
-
-    $link = url("node/{$node->nid}", NULL, NULL, TRUE);
-
-    $items .= format_rss_item($node->title, $link, check_markup($node->description, $node->format, FALSE), $extra);
-  }
-  
-  return $items;
-}
-
-/**
- *  Format and print a revision feed.
- *
- * @param $items string The individual RSS items.
- * @param $channel array The channels present in the RSS.
- * @param $namespaces array The namespaces present in the RSS.
- */
-function revisions_rss_format_feed($items, $channel = array(), $namespaces = array()) {
-  global $base_url, $locale;
-  
-  $channel_defaults = array(
-    'version' => '2.0',
-    'title' => t('@site_name - Updates', array('@site_name' => variable_get('site_name', 'Drupal'))),
-    'link' => $base_url,
-    'description' => t('Updates'),
-    'language' => $locale);
-  $channel = array_merge($channel_defaults, $channel);
-  $namespaces = array_merge(array('xmlns:dc="http://purl.org/dc/elements/1.1/"'), $namespaces);
-  
-  $output = '<?xml version="1.0" encoding="utf-8"?>'."\n";
-  $output .= '<rss version="'. $channel['version'] .'" xml:base="'. $base_url .'" '. implode(' ', $namespaces) .">\n";
-  $output .= format_rss_channel($channel['title'], $channel['link'], $channel['description'], $items, $channel['language']);
-  $output .= "</rss>\n";
-  
-  drupal_set_header('Content-Type: application/rss+xml; charset=utf-8');
-  
-  print$output;
 }
