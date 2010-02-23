@@ -1,5 +1,5 @@
 <?php
-// $Id: revisions_rss.module,v 1.4 2009/01/21 21:29:18 alexj Exp $
+// $Id: revisions_rss.module,v 1.5 2010/02/23 18:28:59 alexj Exp $
 
 /**
  * @file
@@ -37,7 +37,7 @@ function revisions_rss_menu() {
   );
   $items['node/%node/revisions/rss'] = array(
     'title' => '',
-    'page callback' => 'revisions_rss_handler',
+    'page callback' => '_revisions_rss_format_feed',
     'page arguments' => array(1),
     'access arguments' => array(REV_RSS_PERM),
     'type' => MENU_CALLBACK,
@@ -47,18 +47,10 @@ function revisions_rss_menu() {
   return $items;
 }
 
-/**
- * Implementation of hook_init().
- */
-function revisions_rss_init() {
-  // Expose node feed on node view page.
-  if ((arg(0) == 'node') && is_numeric($nid = arg(1)) && is_null(arg(2)) &&
-      ($node = node_load($nid)) && revision_rss_check_type($node) &&
-      user_access(REV_RSS_PERM)) {
-
-    drupal_add_feed(url("node/{$node->nid}/revisions/rss"),
-                    t('Updates to "@title"', array('@title' => $node->title))
-    );
+function revisions_rss_nodeapi(&$node, $op, $teaser, $page) {
+  if(user_access(REV_RSS_PERM) && $op == 'view' && !$teaser && $page && revision_rss_check_type($node)) {
+    $feed_url = url("node/{$node->nid}/revisions/rss");
+    drupal_add_feed($feed_url, t('Updates to "@title"', array('@title' => $node->title))); 
   }
 }
 
@@ -70,5 +62,5 @@ function revisions_rss_init() {
  * @return bool True if RSS should be available for this node type, false otherwise.
  */
 function revision_rss_check_type($node) {
-  return $node->nid && in_array($node->type, variable_get('revision_rss_nodetypes', array('page')));
+  return in_array($node->type, variable_get('revision_rss_nodetypes', array('page')));
 }

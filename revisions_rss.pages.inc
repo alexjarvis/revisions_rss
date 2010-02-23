@@ -1,81 +1,41 @@
 <?php
-// $Id: revisions_rss.pages.inc,v 1.1 2009/01/21 21:29:18 alexj Exp $ 
-
-/**
- * @file
- * Revisions RSS feed generator.
- */
-
-/**
- * Menu callback; publish an RSS feed
- */
-function revisions_rss_handler(&$node) {
-  if ($output = revisions_rss_node_feed($node->nid)) {
-      print $output;
-      
-      return;
-  }
-  
-  drupal_not_found();
-}
-
-/**
- * Publish a feed for all revisions of a specific node
- *
- * @return bool True if successful in generating a feed, false otherwise.
- */
-function revisions_rss_node_feed($nid) {
-  global $base_url;
-
-  $node = node_load($nid);
-
-  if (revision_rss_check_type($node)) {
-    $items = revisions_rss_get_revisions($node->nid);
-
-    $namespaces = array();
-
-    $channel = array(
-      'title' => t('@site - Updates for "@title"', array(
-        '@site' => variable_get('site_name', 'Drupal'),
-        '@title' => $node->title)),
-      'description' => t('Updates for "@title"', array('@title' => $node->title)),
-      'link' => url('node/{$node->nid}', array('absolute' => TRUE)),
-    );
-
-    return revisions_rss_format_feed($items, $channel, $namespaces);
-  }
-  else {
-    return FALSE;
-  }
-}
+// $Id: revisions_rss.pages.inc,v 1.2 2010/02/23 18:28:59 alexj Exp $ 
 
 /**
  *  Format and print a revision feed.
  *
- * @param $items string The individual RSS items.
+ * @param $rss_items string The individual RSS items.
  * @param $channel array The channels present in the RSS.
- * @param $namespaces array The namespaces present in the RSS.
+ * @param $namespaces array The namespaces present in the RSS.   
+ * @see node_feed
  */
-function revisions_rss_format_feed($items, $channel = array(), $namespaces = array()) {
-  global $base_url, $locale;
+function _revisions_rss_format_feed($revision) {
+  if(!revision_rss_check_type($revision)) {
+    drupal_not_found();
+    return;
+  }
 
-  $channel_defaults = array(
-    'version' => '2.0',
-    'title' => t('@site_name - Updates', array('@site_name' => variable_get('site_name', 'Drupal'))),
-    'link' => $base_url,
-    'description' => t('Updates'),
-    'language' => $locale);
-  $channel = array_merge($channel_defaults, $channel);
-  $namespaces = array_merge(array('xmlns:dc="http://purl.org/dc/elements/1.1/"'), $namespaces);
+  global $base_url, $language;  
 
-  $output = '<?xml version="1.0" encoding="utf-8"?>'."\n";
-  $output .= '<rss version="'. $channel['version'] .'" xml:base="'. $base_url .'" '. implode(' ', $namespaces) .">\n";
-  $output .= format_rss_channel($channel['title'], $channel['link'], $channel['description'], $items, $channel['language']);
+  $channel = array(
+    'version'     => '2.0',
+    'title'       => t('@site - Updates for "@title"', array(
+                       '@site' => variable_get('site_name', 'Drupal'),
+                       '@title' => $revision->title)),
+    'link'        => url("node/{$revision->nid}", array('absolute' => TRUE)),
+    'description' => t('Updates for "@title"', array('@title' => $revision->title)),
+    'language'    => $language->language,
+  ); 
+  $namespaces = array('xmlns:dc' => 'http://purl.org/dc/elements/1.1/'); 
+  $revisions = _revisions_rss_get_revisions($revision->nid);
+
+  $output  = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
+  $output .= "<rss version=\"". $channel["version"] ."\" xml:base=\"". $base_url ."\" ". drupal_attributes($namespaces) .">\n";
+  $output .= format_rss_channel($channel['title'], $channel['link'], $channel['description'], $revisions, $channel['language']);
   $output .= "</rss>\n";
-
+  
   drupal_set_header('Content-Type: application/rss+xml; charset=utf-8');
-
-  return $output;
+  print $output;
 }
 
 /**
@@ -84,59 +44,87 @@ function revisions_rss_format_feed($items, $channel = array(), $namespaces = arr
  * @param $nid int The node ID of the note to generate RSS for.
  * @return The generated RSS.
  */
-function revisions_rss_get_revisions($nid) {
+function _revisions_rss_get_revisions($nid) {  
   global $base_url;
 
-  $items = '';
+  $rss_items = '';
+  $latest_vid;
 
   $sql = "SELECT nr.nid
                , n.title
-               , nr.uid
+               , u.name AS author
                , nr.vid
-               , n.vid AS latest
                , nr.log
                , nr.timestamp
           FROM {node_revisions} nr
           INNER JOIN {node} n
              ON nr.nid = n.nid
+          INNER JOIN {users} u
+             ON nr.uid = u.uid
           WHERE nr.nid = '$nid'
           ORDER BY nr.timestamp DESC";
 
-  $nodes = db_query_range(db_rewrite_sql($sql), 0, variable_get('feed_default_items', 10));
+  $revisions_list = db_query_range(db_rewrite_sql($sql), 0, variable_get('feed_default_items', 10));
 
-  while ($node = db_fetch_object($nodes)) {
-    $user = user_load(array('uid' => $node->uid));
-    $node->name = $user->name;
+  while($revision = db_fetch_object($revisions_list)) {
+    $description_list = array();
+    
+    if(empty($latest_vid)) {
+      $latest_vid = $revision->vid;
+    }          
 
-    if (!empty( $node->log)) {
-        $node->description = "Log: {$node->log}\n\n";
+    $updated = format_date($revision->timestamp, 'large'); 
+    
+    if(user_access('access user profiles')) {
+      $user_link = l($revision->author, "users/{$revision->author}", array('absolute' => TRUE));
     }
-
-    $node->description .= "Updated by: {$user->name}\n\n";
+    else {
+      $user_link = $revision->author;
+    }
+    
+    if(!empty($revision->log)) {
+      $description_list[] = nl2br($revision->log);
+    }          
+             
+    $description_list[] = "Updated $updated, by $user_link";
+    _revisions_rss_module_integrations($description_list, $revision, $latest_vid);
+      
+    foreach($description_list as $description) {
+      $revision->description .= "<p>$description</p>";
+    }
 
     $extra = array(
       array(
-        'key' => 'pubDate',
-        'value' => date('r', $node->timestamp)),
+        'key' => 'pubDate', 'value' => gmdate('r', $revision->timestamp)),
       array(
-        'key' => 'dc:creator',
-        'value' => $node->name),
+        'key' => 'dc:creator', 'value' => $revision->author),
       array(
-        'key' => 'guid',
-        'value' => t("Update !vid at !base/node/!nid", array('!vid' => $node->vid,
-                                                             '!base' => $base_url,
-                                                             '!nid' => $node->nid)),
+        'key' => 'guid', 'value' => "Update {$revision->vid} of $base_url/node/{$revision->nid}",
         'attributes' => array('isPermaLink' => 'false'))
     );
-
-    if (module_exists('diff') && $node->vid != $node->latest) {
-      $node->description .= l("Diff vs Newest", "node/{$node->nid}/revisions/view/{$node->vid}/{$node->latest}");
+    
+    if(user_access('view revisions') && $revision->vid != $latest_vid) {
+      $link = url("node/{$revision->nid}/revisions/{$revision->vid}/view", array('absolute' => TRUE));  
     }
-
-    $link = url("node/{$node->nid}", array('absolute' => TRUE));
-
-    $items .= format_rss_item($node->title, $link, check_markup($node->description, $node->format, FALSE), $extra);
+    else {
+      $link = url("node/{$revision->nid}", array('absolute' => TRUE));
+    }
+    
+    $rss_items .= format_rss_item($revision->title, $link, $revision->description, $extra);
   }
 
-  return $items;
+  return $rss_items;
+}
+
+/**
+ * Allows extra features provided by other modules to be added to an RSS item.
+ * 
+ * @param array $description_list The current array of item descriptions to be appended to.
+ * @param object $revision The revision object this information is for.
+ * @param int $latest_vid The latest revision ID for this node.
+ */
+function _revisions_rss_module_integrations(&$description_list, $revision, $latest_vid) {
+   if (module_exists('diff') && $revision->vid != $latest_vid && user_access('view revisions')) {
+      $description_list[] = l("Diff vs. Newest", "node/{$revision->nid}/revisions/view/{$revision->vid}/$latest_vid");
+    }
 }
