@@ -1,5 +1,5 @@
 <?php
-// $Id: revisions_rss.pages.inc,v 1.5 2010/02/25 23:41:03 alexj Exp $  
+// $Id: revisions_rss.pages.inc,v 1.6 2010/02/25 23:52:25 alexj Exp $  
 
 /**
  * @file
@@ -67,7 +67,7 @@ function _revisions_rss_get_revisions($nid) {
           WHERE nr.nid = %d
           ORDER BY nr.timestamp DESC";
 
-  $revisions_list = db_query_range(db_rewrite_sql($sql), $nid, 0, variable_get('feed_default_items', 10));
+  $revisions_list = db_query_range($sql, $nid, 0, variable_get('feed_default_items', 10));
 
   while($revision = db_fetch_object($revisions_list)) {
     $description_list = array();
