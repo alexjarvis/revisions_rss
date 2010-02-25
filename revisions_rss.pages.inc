@@ -1,5 +1,5 @@
 <?php
-// $Id: revisions_rss.pages.inc,v 1.3 2010/02/25 21:50:14 alexj Exp $  
+// $Id: revisions_rss.pages.inc,v 1.4 2010/02/25 23:06:00 alexj Exp $  
 
 /**
  * @file
@@ -7,15 +7,13 @@
  */
 
 /**
- *  Format and print a revision feed.
+ * Format and print a revision feed.
  *
- * @param $rss_items string The individual RSS items.
- * @param $channel array The channels present in the RSS.
- * @param $namespaces array The namespaces present in the RSS.   
+ * @param $revision_node The node revisions are being pulled for. 
  * @see node_feed
  */
-function _revisions_rss_format_feed($revision) {
-  if(!revisions_rss_check_type($revision)) {
+function _revisions_rss_format_feed($revision_node) {
+  if(!revisions_rss_check_type($revision_node)) {
     drupal_not_found();
     return;
   }
@@ -26,17 +24,17 @@ function _revisions_rss_format_feed($revision) {
     'version'     => '2.0',
     'title'       => t('@site - Updates for "@title"', array(
                        '@site' => variable_get('site_name', 'Drupal'),
-                       '@title' => $revision->title)),
-    'link'        => url("node/{$revision->nid}", array('absolute' => TRUE)),
-    'description' => t('Updates for "@title"', array('@title' => $revision->title)),
+                       '@title' => $revision_node->title)),
+    'link'        => url("node/{$revision_node->nid}", array('absolute' => TRUE)),
+    'description' => t('Updates for "@title"', array('@title' => $revision_node->title)),
     'language'    => $language->language,
   ); 
   $namespaces = array('xmlns:dc' => 'http://purl.org/dc/elements/1.1/'); 
-  $revisions = _revisions_rss_get_revisions($revision->nid);
+  $revision_nodes = _revisions_rss_get_revisions($revision_node->nid);
 
   $output  = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
   $output .= "<rss version=\"". $channel["version"] ."\" xml:base=\"". $base_url ."\" ". drupal_attributes($namespaces) .">\n";
-  $output .= format_rss_channel($channel['title'], $channel['link'], $channel['description'], $revisions, $channel['language']);
+  $output .= format_rss_channel($channel['title'], $channel['link'], $channel['description'], $revision_nodes, $channel['language']);
   $output .= "</rss>\n";
   
   drupal_set_header('Content-Type: application/rss+xml; charset=utf-8');
@@ -66,10 +64,10 @@ function _revisions_rss_get_revisions($nid) {
              ON nr.nid = n.nid
           INNER JOIN {users} u
              ON nr.uid = u.uid
-          WHERE nr.nid = '$nid'
+          WHERE nr.nid = '%d'
           ORDER BY nr.timestamp DESC";
 
-  $revisions_list = db_query_range(db_rewrite_sql($sql), 0, variable_get('feed_default_items', 10));
+  $revisions_list = db_query_range(db_rewrite_sql($sql), $nid, 0, variable_get('feed_default_items', 10));
 
   while($revision = db_fetch_object($revisions_list)) {
     $description_list = array();

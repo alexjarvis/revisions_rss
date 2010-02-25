@@ -1,5 +1,5 @@
 <?php
-// $Id: revisions_rss.install,v 1.3 2010/02/25 21:50:14 alexj Exp $
+// $Id: revisions_rss.install,v 1.4 2010/02/25 23:06:00 alexj Exp $
 
 /**
  * @file
@@ -19,4 +19,27 @@ function revisions_rss_uninstall() {
 function revisions_rss_update_6160() {
   variable_set('revisions_rss_nodetypes', variable_get('revision_rss_nodetypes', array('page')));
   variable_del('revision_rss_nodetypes');
+  
+  return array();
+}
+
+/**
+ * Renamed permission.
+ */
+function revisions_rss_update_6165() {
+  $sql = 'SELECT pid, perm
+          FROM {permission}
+          WHERE perm LIKE "%%s%"';
+          
+  $perms_results = db_query($sql, 'view revision rss');
+  
+  while($permission = db_fetch_object($perms_results)) {
+    $new_permission = str_replace('view revision rss', 'view revisions rss', $permission->perm);
+    
+    db_query('UPDATE {permission}
+              SET perm = "%s"
+              WHERE pid = %d', $new_permission, $permission->pid);
+  }
+  
+  return array();
 }
