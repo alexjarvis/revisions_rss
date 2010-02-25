@@ -1,5 +1,5 @@
 <?php
-// $Id: revisions_rss.pages.inc,v 1.4 2010/02/25 23:06:00 alexj Exp $  
+// $Id: revisions_rss.pages.inc,v 1.5 2010/02/25 23:41:03 alexj Exp $  
 
 /**
  * @file
@@ -36,7 +36,7 @@ function _revisions_rss_format_feed($revision_node) {
   $output .= "<rss version=\"". $channel["version"] ."\" xml:base=\"". $base_url ."\" ". drupal_attributes($namespaces) .">\n";
   $output .= format_rss_channel($channel['title'], $channel['link'], $channel['description'], $revision_nodes, $channel['language']);
   $output .= "</rss>\n";
-  
+
   drupal_set_header('Content-Type: application/rss+xml; charset=utf-8');
   print $output;
 }
@@ -64,7 +64,7 @@ function _revisions_rss_get_revisions($nid) {
              ON nr.nid = n.nid
           INNER JOIN {users} u
              ON nr.uid = u.uid
-          WHERE nr.nid = '%d'
+          WHERE nr.nid = %d
           ORDER BY nr.timestamp DESC";
 
   $revisions_list = db_query_range(db_rewrite_sql($sql), $nid, 0, variable_get('feed_default_items', 10));
@@ -115,7 +115,7 @@ function _revisions_rss_get_revisions($nid) {
     
     $rss_items .= format_rss_item($revision->title, $revision_link, $revision->description, $extra);
   }
-
+  
   return $rss_items;
 }
 
