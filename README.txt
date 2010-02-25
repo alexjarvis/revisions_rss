@@ -1,4 +1,4 @@
-$Id: README.txt,v 1.2 2009/01/21 21:29:18 alexj Exp $
+$Id: README.txt,v 1.3 2010/02/25 21:50:14 alexj Exp $
 Drupal revision_rss Overview
 ------------------------------------------------------------------------------
 This module generates an RSS feed for node revisions. This allows users to 
@@ -25,6 +25,3 @@ Credits / Contact
 ------------------------------------------------------------------------------
 This module was created by Alex Jarvis (alexj[at]grrl.lib.mn.us), sponsored by 
 the Great River Regional Library (http://www.griver.org).
-
-Thanks to the developers of the Comment RSS (http://drupal.org/project/commentrss) 
-module for inspiration.

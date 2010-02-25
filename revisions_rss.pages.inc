@@ -1,5 +1,10 @@
 <?php
-// $Id: revisions_rss.pages.inc,v 1.2 2010/02/23 18:28:59 alexj Exp $ 
+// $Id: revisions_rss.pages.inc,v 1.3 2010/02/25 21:50:14 alexj Exp $  
+
+/**
+ * @file
+ * Generates the actual RSS page view.
+ */
 
 /**
  *  Format and print a revision feed.
@@ -10,7 +15,7 @@
  * @see node_feed
  */
 function _revisions_rss_format_feed($revision) {
-  if(!revision_rss_check_type($revision)) {
+  if(!revisions_rss_check_type($revision)) {
     drupal_not_found();
     return;
   }
@@ -50,9 +55,9 @@ function _revisions_rss_get_revisions($nid) {
   $rss_items = '';
   $latest_vid;
 
-  $sql = "SELECT nr.nid
-               , n.title
-               , u.name AS author
+  $sql = "SELECT n.title
+               , u.name
+               , nr.uid
                , nr.vid
                , nr.log
                , nr.timestamp
@@ -76,10 +81,10 @@ function _revisions_rss_get_revisions($nid) {
     $updated = format_date($revision->timestamp, 'large'); 
     
     if(user_access('access user profiles')) {
-      $user_link = l($revision->author, "users/{$revision->author}", array('absolute' => TRUE));
+      $user_link = l($revision->name, "user/{$revision->uid}", array('absolute' => TRUE));
     }
     else {
-      $user_link = $revision->author;
+      $user_link = $revision->name;
     }
     
     if(!empty($revision->log)) {
@@ -97,20 +102,20 @@ function _revisions_rss_get_revisions($nid) {
       array(
         'key' => 'pubDate', 'value' => gmdate('r', $revision->timestamp)),
       array(
-        'key' => 'dc:creator', 'value' => $revision->author),
+        'key' => 'dc:creator', 'value' => $revision->name),
       array(
         'key' => 'guid', 'value' => "Update {$revision->vid} of $base_url/node/{$revision->nid}",
         'attributes' => array('isPermaLink' => 'false'))
     );
     
     if(user_access('view revisions') && $revision->vid != $latest_vid) {
-      $link = url("node/{$revision->nid}/revisions/{$revision->vid}/view", array('absolute' => TRUE));  
+      $revision_link = url("node/{$revision->nid}/revisions/{$revision->vid}/view", array('absolute' => TRUE));  
     }
     else {
-      $link = url("node/{$revision->nid}", array('absolute' => TRUE));
+      $revision_link = url("node/{$revision->nid}", array('absolute' => TRUE));
     }
     
-    $rss_items .= format_rss_item($revision->title, $link, $revision->description, $extra);
+    $rss_items .= format_rss_item($revision->title, $revision_link, $revision->description, $extra);
   }
 
   return $rss_items;
@@ -124,7 +129,7 @@ function _revisions_rss_get_revisions($nid) {
  * @param int $latest_vid The latest revision ID for this node.
  */
 function _revisions_rss_module_integrations(&$description_list, $revision, $latest_vid) {
-   if (module_exists('diff') && $revision->vid != $latest_vid && user_access('view revisions')) {
-      $description_list[] = l("Diff vs. Newest", "node/{$revision->nid}/revisions/view/{$revision->vid}/$latest_vid");
-    }
+  if (module_exists('diff') && $revision->vid != $latest_vid && user_access('view revisions')) {
+    $description_list[] = l("Diff vs. Newest", "node/{$revision->nid}/revisions/view/{$revision->vid}/$latest_vid");
+  }
 }

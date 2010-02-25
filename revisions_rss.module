@@ -1,18 +1,16 @@
 <?php
-// $Id: revisions_rss.module,v 1.5 2010/02/23 18:28:59 alexj Exp $
+// $Id: revisions_rss.module,v 1.6 2010/02/25 21:50:14 alexj Exp $
 
 /**
  * @file
  * Revision RSS, written by Alex Jarvis
  */
 
-define('REV_RSS_PERM', 'view revision rss');
-
 /*
  * Adds a permission for viewing RSS revisions.
  */
 function revisions_rss_perm() {
-  return array(REV_RSS_PERM);
+  return array('view revisions rss');
 }
 
 /**
@@ -29,7 +27,7 @@ function revisions_rss_menu() {
     'title' => 'Revision RSS publishing',
     'description' => 'Configure RSS feeds for revisions.',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('revision_rss_admin_settings'),
+    'page arguments' => array('revisions_rss_admin_settings'),
     'access arguments' => array('administer site configuration'),
     'type' => MENU_LOCAL_TASK,
     'weight' => 10,
@@ -39,7 +37,7 @@ function revisions_rss_menu() {
     'title' => '',
     'page callback' => '_revisions_rss_format_feed',
     'page arguments' => array(1),
-    'access arguments' => array(REV_RSS_PERM),
+    'access arguments' => array('view revisions rss'),
     'type' => MENU_CALLBACK,
     'file' => 'revisions_rss.pages.inc',
   );
@@ -47,20 +45,23 @@ function revisions_rss_menu() {
   return $items;
 }
 
+/**
+ * Implementation of hook_nodeapi.
+ */
 function revisions_rss_nodeapi(&$node, $op, $teaser, $page) {
-  if(user_access(REV_RSS_PERM) && $op == 'view' && !$teaser && $page && revision_rss_check_type($node)) {
+  if(user_access('view revisions rss') && $op == 'view' && !$teaser && $page && revisions_rss_check_type($node)) {
     $feed_url = url("node/{$node->nid}/revisions/rss");
     drupal_add_feed($feed_url, t('Updates to "@title"', array('@title' => $node->title))); 
   }
 }
 
 /**
- * Check if RSS should be available for the given node.
+ * Check if an RSS feed should be available for the given node.
  *
  * @param $node The node object to check against.
  *
  * @return bool True if RSS should be available for this node type, false otherwise.
  */
-function revision_rss_check_type($node) {
-  return in_array($node->type, variable_get('revision_rss_nodetypes', array('page')));
+function revisions_rss_check_type($node) {
+  return in_array($node->type, variable_get('revisions_rss_nodetypes', array('page')));
 }
