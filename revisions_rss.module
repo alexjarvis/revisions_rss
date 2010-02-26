@@ -1,5 +1,5 @@
 <?php
-// $Id: revisions_rss.module,v 1.7 2010/02/26 16:19:17 alexj Exp $
+// $Id: revisions_rss.module,v 1.8 2010/02/26 19:39:15 alexj Exp $
 
 /**
  * @file
@@ -9,8 +9,10 @@
 /*
  * Adds a permission for viewing RSS revisions.
  */
-function revisions_rss_perm() {
-  return array('view revisions rss');
+function revisions_rss_permission() {
+  return array(
+    'view revisions rss' => array('title' => t('View Revisions RSS')),
+  );
 }
 
 /**
@@ -19,11 +21,11 @@ function revisions_rss_perm() {
 function revisions_rss_menu() {
   $items = array();
 
-  $items['admin/content/rss-publishing/default'] = array(
+  $items['admin/config/services/rss-publishing/default'] = array(
     'title' => 'General settings',
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
-  $items['admin/content/rss-publishing/revisions-rss'] = array(
+  $items['admin/config/services/rss-publishing/revision-rss'] = array(
     'title' => 'Revisions RSS publishing',
     'description' => 'Configure RSS feeds for revisions.',
     'page callback' => 'drupal_get_form',
@@ -46,13 +48,13 @@ function revisions_rss_menu() {
 }
 
 /**
- * Implementation of hook_nodeapi.
+ * Implementation of hook_node_view.
  */
-function revisions_rss_nodeapi(&$node, $op, $teaser, $page) {
-  if(user_access('view revisions rss') && $op == 'view' && !$teaser && $page && revisions_rss_check_type($node)) {
+function revisions_rss_node_view($node, $view_mode) {
+   if(user_access('view revisions rss') && $view_mode='full' && revisions_rss_check_type($node)) {
     $feed_url = url("node/{$node->nid}/revisions/rss");
     drupal_add_feed($feed_url, t('Updates to "@title"', array('@title' => $node->title))); 
-  }
+   }
 }
 
 /**

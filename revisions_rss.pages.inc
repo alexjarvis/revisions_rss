@@ -1,5 +1,5 @@
 <?php
-// $Id: revisions_rss.pages.inc,v 1.7 2010/02/26 16:19:17 alexj Exp $  
+// $Id: revisions_rss.pages.inc,v 1.8 2010/02/26 19:39:15 alexj Exp $  
 
 /**
  * @file
@@ -37,7 +37,7 @@ function _revisions_rss_format_feed($revision_node) {
   $output .= format_rss_channel($channel['title'], $channel['link'], $channel['description'], $revision_nodes, $channel['language']);
   $output .= "</rss>\n";
 
-  drupal_set_header('Content-Type: application/rss+xml; charset=utf-8');
+  drupal_add_http_header('Content-Type', 'application/rss+xml; charset=utf-8');
   print $output;
 }
 
@@ -52,25 +52,20 @@ function _revisions_rss_get_revisions($nid) {
 
   $rss_items = '';
   $latest_vid;
+  
+  $query   = db_select('node_revision', 'nr');
+  $u_alias = $query->join('users', 'u', 'u.uid = nr.uid');
+  $query->fields('nr', array('nid', 'uid', 'title', 'vid', 'log', 'timestamp'))
+        ->fields("{$u_alias}", array('name'))
+        ->condition('nr.nid', $nid)
+        ->addTag('node_access')
+        ->orderBy('nr.timestamp', 'DESC')  
+        ->addTag('node_access')         
+        ->range(0, variable_get('feed_default_items', 10));
+        
+  $revisions_list = $query->execute();
 
-  $sql = "SELECT n.title
-               , u.name
-               , nr.nid
-               , nr.uid
-               , nr.vid
-               , nr.log
-               , nr.timestamp
-          FROM {node_revisions} nr
-          INNER JOIN {node} n
-             ON nr.nid = n.nid
-          INNER JOIN {users} u
-             ON nr.uid = u.uid
-          WHERE nr.nid = %d
-          ORDER BY nr.timestamp DESC";
-
-  $revisions_list = db_query_range($sql, $nid, 0, variable_get('feed_default_items', 10));
-
-  while($revision = db_fetch_object($revisions_list)) {
+  foreach($revisions_list as $revision) {
     $description_list = array();
     
     if(empty($latest_vid)) {

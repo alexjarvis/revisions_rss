@@ -1,5 +1,5 @@
 <?php
-// $Id: revisions_rss.admin.inc,v 1.3 2010/02/26 16:19:17 alexj Exp $
+// $Id: revisions_rss.admin.inc,v 1.4 2010/02/26 19:39:15 alexj Exp $
 
 /**
  * @file
@@ -10,10 +10,16 @@
  * Menu callback; displays the Revisions RSS admin settings page.
  */
 function revisions_rss_admin_settings() {
+  $types = node_type_get_types();
+
+  foreach($types as $type) {
+    $options[$type->type] = $type->name;
+  }
+  
   $form['revisions_rss_nodetypes'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Generate RSS for these node types'),
-    '#options' => node_get_types('names'),
+    '#options' => $options,
     '#default_value' => variable_get('revisions_rss_nodetypes', array('page')));
   $form['array_filter'] = array('#type' => 'hidden');
 
