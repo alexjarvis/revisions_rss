@@ -1,5 +1,5 @@
 <?php
-// $Id: revisions_rss.install,v 1.4 2010/02/25 23:06:00 alexj Exp $
+// $Id: revisions_rss.install,v 1.5 2010/02/26 16:19:17 alexj Exp $
 
 /**
  * @file
@@ -26,7 +26,7 @@ function revisions_rss_update_6160() {
 /**
  * Renamed permission.
  */
-function revisions_rss_update_6165() {
+function revisions_rss_update_6170() {
   $sql = 'SELECT pid, perm
           FROM {permission}
           WHERE perm LIKE "%%s%"';

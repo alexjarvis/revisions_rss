@@ -1,9 +1,9 @@
 <?php
-// $Id: revisions_rss.module,v 1.6 2010/02/25 21:50:14 alexj Exp $
+// $Id: revisions_rss.module,v 1.7 2010/02/26 16:19:17 alexj Exp $
 
 /**
  * @file
- * Revision RSS, written by Alex Jarvis
+ * Revisions RSS, written by Alex Jarvis.
  */
 
 /*
@@ -23,8 +23,8 @@ function revisions_rss_menu() {
     'title' => 'General settings',
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
-  $items['admin/content/rss-publishing/revision-rss'] = array(
-    'title' => 'Revision RSS publishing',
+  $items['admin/content/rss-publishing/revisions-rss'] = array(
+    'title' => 'Revisions RSS publishing',
     'description' => 'Configure RSS feeds for revisions.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('revisions_rss_admin_settings'),
@@ -58,7 +58,7 @@ function revisions_rss_nodeapi(&$node, $op, $teaser, $page) {
 /**
  * Check if an RSS feed should be available for the given node.
  *
- * @param $node The node object to check against.
+ * @param object $node The node object to check against.
  *
  * @return bool True if RSS should be available for this node type, false otherwise.
  */

@@ -1,5 +1,5 @@
-$Id: README.txt,v 1.3 2010/02/25 21:50:14 alexj Exp $
-Drupal revision_rss Overview
+$Id: README.txt,v 1.4 2010/02/26 16:19:17 alexj Exp $
+Drupal revisions_rss Overview
 ------------------------------------------------------------------------------
 This module generates an RSS feed for node revisions. This allows users to 
 subscribe to updates on individual nodes. This functionality is particularly 
@@ -17,7 +17,7 @@ Installation
 ------------------------------------------------------------------------------
   - Copy the module files to modules/
   - Enable the module on the Drupal admin page.
-  - The node types to generate feeds for can be controlled on the "Revision RSS 
+  - The node types to generate feeds for can be controlled on the "Revisions RSS 
     publishing" tab of the "RSS publishing" page (admin/content/rss-publishing)
 
 

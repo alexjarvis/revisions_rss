@@ -1,5 +1,5 @@
 <?php
-// $Id: revisions_rss.pages.inc,v 1.6 2010/02/25 23:52:25 alexj Exp $  
+// $Id: revisions_rss.pages.inc,v 1.7 2010/02/26 16:19:17 alexj Exp $  
 
 /**
  * @file
@@ -8,8 +8,8 @@
 
 /**
  * Format and print a revision feed.
- *
- * @param $revision_node The node revisions are being pulled for. 
+ * 
+ * @param object $revision_node The node revisions are being pulled for. 
  * @see node_feed
  */
 function _revisions_rss_format_feed($revision_node) {
@@ -44,7 +44,7 @@ function _revisions_rss_format_feed($revision_node) {
 /**
  *  Takes a node ID and generates the rss for that nodes revisions.
  *
- * @param $nid int The node ID of the note to generate RSS for.
+ * @param int $nid The node ID of the note to generate RSS for.
  * @return The generated RSS.
  */
 function _revisions_rss_get_revisions($nid) {  
@@ -55,6 +55,7 @@ function _revisions_rss_get_revisions($nid) {
 
   $sql = "SELECT n.title
                , u.name
+               , nr.nid
                , nr.uid
                , nr.vid
                , nr.log
