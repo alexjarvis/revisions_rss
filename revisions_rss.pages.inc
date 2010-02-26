@@ -1,5 +1,5 @@
 <?php
-// $Id: revisions_rss.pages.inc,v 1.7 2010/02/26 16:19:17 alexj Exp $  
+// $Id: revisions_rss.pages.inc,v 1.7.2.1 2010/02/26 19:16:20 alexj Exp $  
 
 /**
  * @file
@@ -53,16 +53,14 @@ function _revisions_rss_get_revisions($nid) {
   $rss_items = '';
   $latest_vid;
 
-  $sql = "SELECT n.title
-               , u.name
+  $sql = "SELECT u.name
                , nr.nid
                , nr.uid
+               , nr.title
                , nr.vid
                , nr.log
                , nr.timestamp
           FROM {node_revisions} nr
-          INNER JOIN {node} n
-             ON nr.nid = n.nid
           INNER JOIN {users} u
              ON nr.uid = u.uid
           WHERE nr.nid = %d
